@@ -83,6 +83,11 @@ def verify_document(request):
         try:
             document = Document.objects.get(verification_code=code_from_url)
             
+            # Enmascarar información sensible del paciente
+            from .utils import mask_name, mask_identification
+            masked_patient_name = mask_name(document.patient.name)
+            masked_patient_id = mask_identification(document.patient.identification)
+            
             # Registrar la verificación
             verification = DocumentVerification(
                 document=document,
@@ -95,6 +100,8 @@ def verify_document(request):
             
             return render(request, 'documents/verification_result.html', {
                 'document': document,
+                'masked_patient_name': masked_patient_name,
+                'masked_patient_id': masked_patient_id,
                 'is_valid': True,
                 'verification_url': verification_url
             })
@@ -110,6 +117,11 @@ def verify_document(request):
             try:
                 document = Document.objects.get(verification_code=verification_code)
                 
+                # Enmascarar información sensible del paciente
+                from .utils import mask_name, mask_identification
+                masked_patient_name = mask_name(document.patient.name)
+                masked_patient_id = mask_identification(document.patient.identification)
+                
                 # Registrar la verificación
                 verification = DocumentVerification(
                     document=document,
@@ -122,6 +134,8 @@ def verify_document(request):
                 
                 return render(request, 'documents/verification_result.html', {
                     'document': document,
+                    'masked_patient_name': masked_patient_name,
+                    'masked_patient_id': masked_patient_id,
                     'is_valid': True,
                     'verification_url': verification_url
                 })
@@ -131,6 +145,7 @@ def verify_document(request):
                 })
     
     return render(request, 'documents/verify.html')
+
 
 @login_required
 def serve_pdf(request, pk):
@@ -160,3 +175,38 @@ def serve_pdf(request, pk):
     else:
         messages.error(request, 'El archivo no existe o no se puede acceder a él.')
         return redirect('document_detail', pk=document.pk)
+    
+
+@login_required
+def verify_document_security(request, pk):
+    """Vista para verificar la seguridad de un documento."""
+    document = get_object_or_404(Document, pk=pk)
+    
+    # Verificar permisos
+    if document.created_by != request.user and not request.user.is_admin and not request.user.is_staff:
+        messages.warning(request, 'No tienes permiso para verificar este documento.')
+        return redirect('dashboard')
+    
+    # Verificar que el archivo existe
+    if document.secure_file and os.path.exists(document.secure_file.path):
+        from .utils import verify_pdf_protection
+        
+        # Verificar la seguridad del PDF
+        protection_info = verify_pdf_protection(document.secure_file.path)
+        
+        if protection_info.get("is_protected", False):
+            messages.success(
+                request, 
+                'El documento está protegido correctamente contra ediciones.'
+            )
+        else:
+            error_msg = protection_info.get("error", "Razón desconocida")
+            messages.error(
+                request, 
+                f'El documento no está protegido correctamente: {error_msg}'
+            )
+    else:
+        messages.error(request, 'El archivo no existe o no se puede acceder a él.')
+    
+    return redirect('document_detail', pk=document.pk)
+

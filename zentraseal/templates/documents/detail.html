@@ -345,6 +345,9 @@
                     <a href="{% url 'serve_pdf' document.pk %}" target="_blank" class="btn btn-outline-secondary">
                         <i class="fas fa-print"></i> Imprimir
                     </a>
+                    <a href="{% url 'verify_document_security' document.pk %}" class="btn btn-outline-info">
+                        <i class="fas fa-shield-alt"></i> Verificar Seguridad
+                    </a>
                 </div>
             </div>
         </div>

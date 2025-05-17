@@ -244,6 +244,9 @@ def secure_pdf(file_path, patient, verification_code, user):
     4. Restringe permisos de edición
     5. Calcula y almacena hash del documento
     """
+    # Importaciones
+    from .utils import mask_identification, verify_pdf_protection
+    
     # Crear un archivo temporal para el PDF procesado
     output_filename = os.path.join(
         settings.MEDIA_ROOT, 
@@ -257,7 +260,8 @@ def secure_pdf(file_path, patient, verification_code, user):
     # micro_text = f"{verification_code} "
     micro_text = " "
 
-
+    # Enmascarar ID del paciente para el pie de página
+    masked_patient_id = mask_identification(patient.identification)
 
     # Crear un directorio temporal para guardar imágenes temporales
     temp_dir = tempfile.mkdtemp()
@@ -304,12 +308,12 @@ def secure_pdf(file_path, patient, verification_code, user):
                 for x in range(0, int(page_width), len(micro_text) * 10):  # Aumentar espaciado horizontal (de 6 a 10)
                     c.drawString(x, y, micro_text)
             
-            # Agregar información en el pie de página
+            # Agregar información en el pie de página con identificación enmascarada
             c.setFont("Helvetica-Bold", 10)
             c.setFillColor(Color(0, 0, 0, alpha=1))
             footer_text = (
                 f"Documento seguro de ZentraSeal • Verificación: {verification_code} • "
-                f"Paciente: {patient.identification} • Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+                f"Paciente: {masked_patient_id} • Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
             )
             c.drawString(30, 30, footer_text)
             
@@ -350,6 +354,14 @@ def secure_pdf(file_path, patient, verification_code, user):
         with open(output_filename, "wb") as output_file:
             writer.write(output_file)
         
+        # Verificar que el PDF esté correctamente protegido
+        protection_info = verify_pdf_protection(output_filename)
+        if not protection_info.get("is_protected", False):
+            print(f"ADVERTENCIA: El PDF no está protegido correctamente: {protection_info}")
+            # Aquí podrías lanzar una excepción o manejar el error
+        else:
+            print(f"PDF protegido correctamente: {protection_info}")
+        
         # Calcular el hash del documento
         document_hash = calculate_document_hash(output_filename)
         
@@ -362,7 +374,86 @@ def secure_pdf(file_path, patient, verification_code, user):
             shutil.rmtree(temp_dir)
         except:
             pass
+
 def verify_document_hash(file_path, stored_hash):
     """Verifica si el hash del documento coincide con el almacenado."""
     current_hash = calculate_document_hash(file_path)
     return current_hash == stored_hash
+
+
+def mask_name(name):
+    """
+    Enmascara un nombre mostrando solo las primeras 2 letras de cada parte del nombre.
+    Ejemplo: "JUAN FELIPE" -> "JU** FE****"
+    """
+    if not name:
+        return ""
+        
+    masked_parts = []
+    parts = name.split()
+    
+    for part in parts:
+        if len(part) <= 2:
+            masked_part = part
+        else:
+            visible_chars = 2
+            masked_part = part[:visible_chars] + '*' * (len(part) - visible_chars)
+        masked_parts.append(masked_part)
+    
+    return " ".join(masked_parts)
+
+def mask_identification(identification):
+    """
+    Enmascara un número de identificación mostrando solo los últimos 4 dígitos.
+    Ejemplo: "9979797" -> "***9797"
+    """
+    if not identification:
+        return ""
+        
+    if len(identification) <= 4:
+        return identification
+    
+    visible_chars = 4
+    return '*' * (len(identification) - visible_chars) + identification[-visible_chars:]
+
+
+def verify_pdf_protection(pdf_path):
+    """
+    Verifica si un PDF tiene protección contra ediciones.
+    
+    Args:
+        pdf_path: Ruta al archivo PDF.
+    
+    Returns:
+        dict: Un diccionario con el estado de protección del PDF.
+    """
+    try:
+        from PyPDF2 import PdfReader
+        reader = PdfReader(pdf_path)
+        
+        # Verificar si el documento está encriptado
+        is_encrypted = reader.is_encrypted
+        
+        # Información sobre permisos (si está disponible)
+        permissions = {}
+        if is_encrypted:
+            # Intentar determinar qué permisos están restringidos
+            # Nota: No podemos obtener los permisos exactos sin la contraseña del propietario
+            permissions = {
+                "is_print_restricted": not reader.can_print,
+                "is_modification_restricted": not reader.can_modify,
+                "is_extraction_restricted": not reader.can_extract_content,
+                "is_annotation_restricted": not reader.can_modify_annotations
+            }
+        
+        return {
+            "is_protected": is_encrypted,
+            "permissions": permissions
+        }
+    except Exception as e:
+        return {
+            "is_protected": False,
+            "error": str(e)
+        }
+    
+
