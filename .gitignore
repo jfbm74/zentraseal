@@ -1,50 +1,41 @@
-# Byte-compiled files
+# 1) Byte-compiled & CPython extensions
 __pycache__/
 *.py[cod]
+**/*.pyc
 *$py.class
 
-# Virtual environments
-venv/
+# 2) Virtual envs
+venv*/
 env/
 .venv/
-venv*/
 
-# Django SQLite DB
+# 3) SQLite DB
 *.sqlite3
 db.sqlite3
 
-# Media: ignora todo excepto media/watermarks
+# 4) Media: only include watermarks
 media/*
 !media/watermarks/
 !media/watermarks/**
 
-# Static files (si haces collectstatic)
+# 5) Static collect
 staticfiles/
 
-# Settings locales o secretos
-local_settings.py
+# 6) Envs & secrets
 .env
 *.env
+local_settings.py
 
-# Logs
-*.log
-
-# IDEs / Editors
+# 7) IDEs / Editors
 .vscode/
 .idea/
 *.swp
 *~
 
-# Distribution / packaging
+# 8) Logs
+*.log
+
+# 9) Packaging
 build/
 dist/
 *.egg-info/
-
-# Compiled Python extensions (CPython)
-*.so
-*.pyd
-
-# Ficheros .cpython-<version>.pyc
-**/*cpython-*.pyc
-**/__pycache__/
-**/*.pyc
