@@ -60,9 +60,7 @@ def create_qr_code(data, size=3*cm):
     qr.make(fit=True)
     
     img = qr.make_image(fill_color="black", back_color="white")
-    buffer = BytesIO()
-    img.save(buffer, format="PNG")
-    return buffer.getvalue()
+    return img  # Retornamos la imagen directamente, no bytes
 
 def calculate_document_hash(file_path):
     """Calcula un hash SHA-256 del documento."""
@@ -91,94 +89,108 @@ def secure_pdf(file_path, patient, verification_code, user):
     # Asegurar que el directorio exista
     os.makedirs(os.path.dirname(output_filename), exist_ok=True)
     
-    # Leer el PDF original
-    reader = PdfReader(file_path)
-    writer = PdfWriter()
+    # Crear un directorio temporal para guardar imágenes temporales
+    temp_dir = tempfile.mkdtemp()
     
-    # Variables para la marca de agua
-    verification_url = f"{settings.BASE_URL}/documents/verify/?code={verification_code}"
-    
-    # Procesar cada página
-    for i, page in enumerate(reader.pages):
-        # Obtener dimensiones de la página
-        page_width = float(page.mediabox.width)
-        page_height = float(page.mediabox.height)
+    try:
+        # Leer el PDF original
+        reader = PdfReader(file_path)
+        writer = PdfWriter()
         
-        # Crear página temporal para marca de agua
-        packet = BytesIO()
-        c = canvas.Canvas(packet, pagesize=(page_width, page_height))
+        # Variables para la marca de agua
+        verification_url = f"{settings.BASE_URL}/documents/verify/?code={verification_code}"
         
-        # Dibujar marca de agua tipo guilloche
-        watermark_img = generate_guilloche_pattern(int(page_width), int(page_height))
-        watermark_buffer = BytesIO()
-        watermark_img.save(watermark_buffer, format="PNG")
-        watermark_buffer.seek(0)  # Importante: mover al inicio del buffer
-        c.drawImage(
-            watermark_buffer, 
-            0, 0, 
-            width=page_width, 
-            height=page_height
+        # Procesar cada página
+        for i, page in enumerate(reader.pages):
+            # Obtener dimensiones de la página
+            page_width = float(page.mediabox.width)
+            page_height = float(page.mediabox.height)
+            
+            # Crear página temporal para marca de agua
+            packet = BytesIO()
+            c = canvas.Canvas(packet, pagesize=(page_width, page_height))
+            
+            # Dibujar marca de agua tipo guilloche - GUARDAR COMO ARCHIVO TEMPORAL
+            watermark_img = generate_guilloche_pattern(int(page_width), int(page_height))
+            watermark_path = os.path.join(temp_dir, f"watermark_{i}.png")
+            watermark_img.save(watermark_path)
+            
+            # Usar la ruta del archivo temporal
+            c.drawImage(
+                watermark_path, 
+                0, 0, 
+                width=page_width, 
+                height=page_height
+            )
+            
+            # Agregar texto de seguridad
+            c.setFont("Helvetica", 8)
+            c.setFillColor(Color(0, 0, 0, alpha=0.3))
+            
+            # Texto de microimpresión repetido como fondo de seguridad
+            micro_text = f"ZENTRASEAL-DOC-{verification_code} "
+            for y in range(0, int(page_height), 20):
+                for x in range(0, int(page_width), len(micro_text) * 3):
+                    c.drawString(x, y, micro_text)
+            
+            # Agregar información en el pie de página
+            c.setFont("Helvetica-Bold", 10)
+            c.setFillColor(Color(0, 0, 0, alpha=1))
+            footer_text = (
+                f"Documento seguro de ZentraSeal • Verificación: {verification_code} • "
+                f"Paciente: {patient.identification} • Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+            )
+            c.drawString(30, 30, footer_text)
+            
+            # Crear y guardar el código QR como archivo temporal
+            qr_img = create_qr_code(verification_url)
+            qr_path = os.path.join(temp_dir, f"qr_{i}.png")
+            qr_img.save(qr_path)
+            
+            # Usar la ruta del archivo temporal
+            c.drawImage(
+                qr_path, 
+                page_width - 3*cm - 20, 
+                20, 
+                width=3*cm, 
+                height=3*cm
+            )
+            
+            c.save()
+            
+            # Mover al inicio del buffer
+            packet.seek(0)
+            watermark = PdfReader(packet)
+            
+            # Combinar la página original con la marca de agua
+            watermarked_page = page
+            watermarked_page.merge_page(watermark.pages[0])
+            writer.add_page(watermarked_page)
+        
+        # Establecer restricciones de seguridad
+        writer.encrypt(
+            user_password="",  # No password required to open
+            owner_password=f"{patient.identification}{verification_code}",  # Password to modify
+            use_128bit=True,
+            permissions_flag=4  # Allow only printing
         )
         
-        # Agregar texto de seguridad
-        c.setFont("Helvetica", 8)
-        c.setFillColor(Color(0, 0, 0, alpha=0.3))
+        # Guardar el archivo resultante
+        with open(output_filename, "wb") as output_file:
+            writer.write(output_file)
         
-        # Texto de microimpresión repetido como fondo de seguridad
-        micro_text = f"ZENTRASEAL-DOC-{verification_code} "
-        for y in range(0, int(page_height), 20):
-            for x in range(0, int(page_width), len(micro_text) * 3):
-                c.drawString(x, y, micro_text)
+        # Calcular el hash del documento
+        document_hash = calculate_document_hash(output_filename)
         
-        # Agregar información en el pie de página
-        c.setFont("Helvetica-Bold", 10)
-        c.setFillColor(Color(0, 0, 0, alpha=1))
-        footer_text = (
-            f"Documento seguro de ZentraSeal • Verificación: {verification_code} • "
-            f"Paciente: {patient.identification} • Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
-        )
-        c.drawString(30, 30, footer_text)
-        
-        # Agregar código QR para verificación
-        qr_code = create_qr_code(verification_url)  # Esta línea faltaba
-        qr_buffer = BytesIO(qr_code)
-        c.drawImage(
-            qr_buffer, 
-            page_width - 3*cm - 20, 
-            20, 
-            width=3*cm, 
-            height=3*cm
-        )
-        
-        c.save()
-        
-        # Mover al inicio del buffer
-        packet.seek(0)
-        watermark = PdfReader(packet)
-        
-        # Combinar la página original con la marca de agua
-        watermarked_page = page
-        watermarked_page.merge_page(watermark.pages[0])
-        writer.add_page(watermarked_page)
+        return output_filename
     
-    # Establecer restricciones de seguridad
-    writer.encrypt(
-        user_password="",  # No password required to open
-        owner_password=f"{patient.identification}{verification_code}",  # Password to modify
-        use_128bit=True,
-        permissions_flag=4  # Allow only printing
-    )
-    
-    # Guardar el archivo resultante
-    with open(output_filename, "wb") as output_file:
-        writer.write(output_file)
-    
-    # Calcular y almacentar el hash del documento
-    document_hash = calculate_document_hash(output_filename)
-    
-    # Aquí se puede implementar el registro en blockchain si es necesario
-    
-    return output_filename
+    finally:
+        # Limpiar los archivos temporales
+        import shutil
+        try:
+            shutil.rmtree(temp_dir)
+        except:
+            pass
 
 def verify_document_hash(file_path, stored_hash):
     """Verifica si el hash del documento coincide con el almacenado."""
