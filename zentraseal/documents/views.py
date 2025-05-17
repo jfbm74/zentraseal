@@ -131,3 +131,32 @@ def verify_document(request):
                 })
     
     return render(request, 'documents/verify.html')
+
+@login_required
+def serve_pdf(request, pk):
+    """Vista especializada para servir archivos PDF con las cabeceras correctas."""
+    document = get_object_or_404(Document, pk=pk)
+    
+    # Verificación de permisos
+    if document.created_by != request.user and not request.user.is_admin and not request.user.is_staff:
+        messages.warning(request, 'No tienes permiso para ver este documento.')
+        return redirect('dashboard')
+    
+    # Verificar que el archivo existe
+    if document.secure_file and os.path.exists(document.secure_file.path):
+        # Leer el contenido del archivo
+        with open(document.secure_file.path, 'rb') as f:
+            file_content = f.read()
+        
+        # Crear respuesta con cabeceras específicas
+        response = HttpResponse(file_content, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{os.path.basename(document.secure_file.name)}"'
+        
+        # Eliminar explícitamente la cabecera X-Frame-Options
+        if 'X-Frame-Options' in response:
+            del response['X-Frame-Options']
+        
+        return response
+    else:
+        messages.error(request, 'El archivo no existe o no se puede acceder a él.')
+        return redirect('document_detail', pk=document.pk)

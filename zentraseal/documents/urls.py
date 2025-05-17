@@ -6,4 +6,8 @@ urlpatterns = [
     path('upload/', views.upload_document, name='upload_document'),
     path('detail/<int:pk>/', views.document_detail, name='document_detail'),
     path('verify/', views.verify_document, name='verify_document'),
+    path('pdf/<int:pk>/', views.serve_pdf, name='serve_pdf'),
+
+
+
 ]

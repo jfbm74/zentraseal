@@ -2,11 +2,283 @@
 
 {% block title %}{{ document.title }} - ZentraSeal{% endblock %}
 
+{% block extra_css %}
+<style>
+    .document-card {
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        border: none;
+        transition: all 0.3s ease;
+    }
+    
+    .document-card:hover {
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+    }
+    
+    .document-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 20px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .document-viewer {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        position: relative;
+    }
+    
+    .iframe-container {
+        position: relative;
+        overflow: hidden;
+        padding-top: 56.25%; /* 16:9 Aspect Ratio */
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    
+    .iframe-container iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: 8px;
+    }
+    
+    .detail-list-item {
+        padding: 12px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background-color 0.2s ease;
+    }
+    
+    .detail-list-item:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    .detail-label {
+        color: #6c757d;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+    }
+    
+    .detail-label i {
+        margin-right: 10px;
+        color: var(--primary-color);
+    }
+    
+    .detail-value {
+        font-weight: 600;
+        color: #343a40;
+    }
+    
+    .verification-badge {
+        border-radius: 50px;
+        padding: 6px 12px;
+        display: inline-flex;
+        align-items: center;
+        font-weight: 600;
+        font-size: 0.85rem;
+        box-shadow: 0 2px 5px rgba(40, 167, 69, 0.2);
+    }
+    
+    .verification-badge i {
+        font-size: 1rem;
+        margin-right: 5px;
+    }
+    
+    .doc-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .doc-actions .btn {
+        flex: 1;
+        border-radius: 8px;
+        padding: 10px 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+    
+    .doc-actions .btn i {
+        margin-right: 8px;
+        font-size: 1.1rem;
+    }
+    
+    .doc-actions .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+    
+    .doc-actions .btn-primary:hover {
+        background-color: #004494;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 86, 179, 0.3);
+    }
+    
+    .doc-actions .btn-outline-secondary {
+        color: #6c757d;
+        border-color: #6c757d;
+    }
+    
+    .doc-actions .btn-outline-secondary:hover {
+        background-color: #6c757d;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+    }
+    
+    .qr-card {
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .qr-image {
+        padding: 15px;
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        margin-bottom: 15px;
+        transition: transform 0.3s ease;
+    }
+    
+    .qr-image:hover {
+        transform: scale(1.03);
+    }
+    
+    .document-actions {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        z-index: 10;
+        display: flex;
+        gap: 8px;
+    }
+    
+    .action-button {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+    }
+    
+    .action-button:hover {
+        background: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .action-button i {
+        color: var(--primary-color);
+        font-size: 1.1rem;
+    }
+    
+    /* Tooltip */
+    .tooltip-container {
+        position: relative;
+        display: inline-block;
+    }
+    
+    .tooltip-container .tooltip-text {
+        visibility: hidden;
+        width: 120px;
+        background-color: #343a40;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px 8px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.3s;
+        font-size: 12px;
+    }
+    
+    .tooltip-container:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
+    
+    .verification-info {
+        background-color: #e8f4f8;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+    
+    .verification-info h6 {
+        color: var(--primary-color);
+        margin-bottom: 10px;
+    }
+    
+    /* Toast notification */
+    .toast-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: #343a40;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 9999;
+        opacity: 0;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        transform: translateY(-20px);
+        display: flex;
+        align-items: center;
+    }
+    
+    .toast-notification.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    .toast-notification i {
+        margin-right: 10px;
+    }
+    
+    @media (max-width: 768px) {
+        .document-actions {
+            position: static;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        
+        .doc-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
+<div id="toastNotification" class="toast-notification">
+    <i class="fas fa-check-circle"></i>
+    <span id="toastMessage">Operación exitosa</span>
+</div>
+
 <div class="row mb-4">
     <div class="col-12">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i></a></li>
                 <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Panel</a></li>
                 <li class="breadcrumb-item active">{{ document.title }}</li>
             </ol>
@@ -15,80 +287,122 @@
 </div>
 
 <div class="row">
-    <div class="col-md-8">
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">{{ document.title }}</h4>
-                {% if document.is_signed %}
-                <span class="verification-badge"><i class="fas fa-check-circle me-1"></i>Documento Protegido</span>
-                {% endif %}
-            </div>
-            <div class="card-body">
-                <div class="embed-responsive embed-responsive-16by9">
-                {% if document.secure_file %}
-                <iframe class="embed-responsive-item" src="{{ document.secure_file.url }}" style="width: 100%; height: 600px;"></iframe>
-                {% else %}
-                <div class="alert alert-warning">
-                    El documento aún no ha sido procesado correctamente. Por favor, contacte al administrador.
+    <div class="col-lg-8 mb-4">
+        <div class="document-card card">
+            <div class="document-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">{{ document.title }}</h4>
+                    <div class="text-muted small">
+                        <i class="far fa-calendar-alt me-1"></i> {{ document.created_at|date:"d/m/Y H:i" }}
+                    </div>
                 </div>
+                {% if document.is_signed %}
+                <span class="verification-badge bg-success text-white">
+                    <i class="fas fa-shield-alt"></i> Protegido
+                </span>
+                {% else %}
+                <span class="badge bg-warning">
+                    <i class="fas fa-exclamation-triangle me-1"></i> Pendiente
+                </span>
                 {% endif %}
-    </div>
             </div>
-            <div class="card-footer">
-                <div class="btn-group w-100">
-                    <a href="{{ document.secure_file.url }}" class="btn btn-primary" download>
-                        <i class="fas fa-download me-1"></i>Descargar
+            
+            <div class="card-body p-4">
+                <div class="document-viewer">
+                    <div class="document-actions">
+                        <div class="action-button tooltip-container" onclick="toggleFullscreen()">
+                            <i class="fas fa-expand"></i>
+                            <span class="tooltip-text">Pantalla completa</span>
+                        </div>
+                        <a href="{% url 'serve_pdf' document.pk %}" target="_blank" class="action-button tooltip-container">
+                            <i class="fas fa-external-link-alt"></i>
+                            <span class="tooltip-text">Abrir en nueva pestaña</span>
+                        </a>
+                    </div>
+                    
+                    {% if document.secure_file %}
+                    <div class="iframe-container" id="documentViewer">
+                        <iframe id="documentFrame" src="{% url 'serve_pdf' document.pk %}" allowfullscreen></iframe>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle me-3 fa-2x"></i>
+                        <div>
+                            <h5 class="alert-heading">Documento no disponible</h5>
+                            <p class="mb-0">El documento aún no ha sido procesado correctamente. Por favor, contacte al administrador.</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="doc-actions mt-4">
+                    <a href="{% url 'serve_pdf' document.pk %}" class="btn btn-primary" download>
+                        <i class="fas fa-download"></i> Descargar
                     </a>
-                    <button class="btn btn-secondary" onclick="copyVerificationLink()">
-                        <i class="fas fa-link me-1"></i>Copiar Enlace de Verificación
+                    <button class="btn btn-outline-secondary" onclick="copyVerificationLink()">
+                        <i class="fas fa-link"></i> Copiar enlace
                     </button>
+                    <a href="{% url 'serve_pdf' document.pk %}" target="_blank" class="btn btn-outline-secondary">
+                        <i class="fas fa-print"></i> Imprimir
+                    </a>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="col-md-4">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Información del Documento</h5>
+    <div class="col-lg-4">
+        <div class="document-card card mb-4">
+            <div class="document-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información del documento</h5>
             </div>
-            <div class="card-body">
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>Tipo:</span>
-                        <span class="fw-bold">{{ document.get_document_type_display }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>Paciente:</span>
-                        <span class="fw-bold">{{ document.patient.name }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>Identificación:</span>
-                        <span class="fw-bold">{{ document.patient.identification }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>Creado por:</span>
-                        <span class="fw-bold">{{ document.created_by.username }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>Fecha de creación:</span>
-                        <span class="fw-bold">{{ document.created_at|date:"d/m/Y H:i" }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>Código de verificación:</span>
-                        <span class="fw-bold">{{ document.verification_code }}</span>
-                    </li>
-                </ul>
+            <div class="card-body p-0">
+                <div class="detail-list-item">
+                    <div class="detail-label"><i class="fas fa-file-medical"></i> Tipo</div>
+                    <div class="detail-value">{{ document.get_document_type_display }}</div>
+                </div>
+                <div class="detail-list-item">
+                    <div class="detail-label"><i class="fas fa-user"></i> Paciente</div>
+                    <div class="detail-value">{{ document.patient.name }}</div>
+                </div>
+                <div class="detail-list-item">
+                    <div class="detail-label"><i class="fas fa-id-card"></i> Identificación</div>
+                    <div class="detail-value">{{ document.patient.identification }}</div>
+                </div>
+                <div class="detail-list-item">
+                    <div class="detail-label"><i class="fas fa-user-md"></i> Creado por</div>
+                    <div class="detail-value">{{ document.created_by.username }}</div>
+                </div>
+                <div class="detail-list-item">
+                    <div class="detail-label"><i class="fas fa-calendar-alt"></i> Fecha</div>
+                    <div class="detail-value">{{ document.created_at|date:"d/m/Y H:i" }}</div>
+                </div>
+                <div class="detail-list-item">
+                    <div class="detail-label"><i class="fas fa-hashtag"></i> Código de verificación</div>
+                    <div class="detail-value">
+                        <span id="verificationCode">{{ document.verification_code }}</span>
+                        <button class="btn btn-sm btn-link text-primary p-0 ms-2" onclick="copyVerificationCode()">
+                            <i class="far fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Código QR de Verificación</h5>
+        <div class="document-card card">
+            <div class="document-header">
+                <h5 class="mb-0"><i class="fas fa-qrcode me-2"></i>Verificación</h5>
             </div>
             <div class="card-body text-center">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ verification_url }}" class="img-fluid" alt="Código QR">
-                <p class="mt-3 mb-0">Escanea este código para verificar la autenticidad del documento.</p>
+                <div class="qr-image">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ verification_url }}" class="img-fluid" alt="Código QR de verificación">
+                </div>
+                
+                <p><strong>Escanea este código QR para verificar la autenticidad del documento</strong></p>
+                
+                <div class="verification-info">
+                    <h6><i class="fas fa-shield-alt me-2"></i>Certificado de autenticidad</h6>
+                    <p class="small mb-0">Este documento está protegido con tecnología ZentraSeal. Para verificar su autenticidad, escanee el código QR o visite <a href="{{ verification_url }}" target="_blank">el portal de verificación</a> usando el código: <strong>{{ document.verification_code }}</strong>.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -100,8 +414,67 @@
 function copyVerificationLink() {
     const verificationUrl = "{{ verification_url }}";
     navigator.clipboard.writeText(verificationUrl).then(function() {
-        alert("Enlace de verificación copiado al portapapeles");
+        showToast("Enlace de verificación copiado al portapapeles");
     });
+}
+
+function copyVerificationCode() {
+    const code = document.getElementById("verificationCode").innerText;
+    navigator.clipboard.writeText(code).then(function() {
+        showToast("Código de verificación copiado al portapapeles");
+    });
+}
+
+function toggleFullscreen() {
+    const viewer = document.getElementById('documentViewer');
+    
+    if (!document.fullscreenElement) {
+        if (viewer.requestFullscreen) {
+            viewer.requestFullscreen();
+        } else if (viewer.webkitRequestFullscreen) { /* Safari */
+            viewer.webkitRequestFullscreen();
+        } else if (viewer.msRequestFullscreen) { /* IE11 */
+            viewer.msRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) { /* Safari */
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) { /* IE11 */
+            document.msExitFullscreen();
+        }
+    }
+}
+
+function showToast(message) {
+    const toast = document.getElementById('toastNotification');
+    const toastMessage = document.getElementById('toastMessage');
+    
+    toastMessage.innerText = message;
+    toast.classList.add('show');
+    
+    setTimeout(function() {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
+// Escuchar eventos de pantalla completa para actualizar el icono
+document.addEventListener("fullscreenchange", updateFullscreenButton);
+document.addEventListener("webkitfullscreenchange", updateFullscreenButton);
+document.addEventListener("mozfullscreenchange", updateFullscreenButton);
+document.addEventListener("MSFullscreenChange", updateFullscreenButton);
+
+function updateFullscreenButton() {
+    const fullscreenButton = document.querySelector('.document-actions .action-button i');
+    
+    if (document.fullscreenElement) {
+        fullscreenButton.classList.remove('fa-expand');
+        fullscreenButton.classList.add('fa-compress');
+    } else {
+        fullscreenButton.classList.remove('fa-compress');
+        fullscreenButton.classList.add('fa-expand');
+    }
 }
 </script>
 {% endblock %}

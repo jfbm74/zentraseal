@@ -53,6 +53,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "zentraseal.middleware.AllowPDFInFrameMiddleware", 
 ]
 
 ROOT_URLCONF = "zentraseal.urls"
@@ -135,3 +136,6 @@ CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 # Base URL para verificación
 BASE_URL = 'http://localhost:8000'
+
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+XS_SHARING_ALLOWED_METHODS = ['POST','GET','OPTIONS', 'PUT', 'DELETE']

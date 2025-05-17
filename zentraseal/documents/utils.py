@@ -19,34 +19,199 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
-def generate_guilloche_pattern(width, height, density=30):
-    """Genera un patrón de guilloche (similar a los billetes) como marca de agua."""
+
+
+
+
+def generate_guilloche_pattern(width, height):
+    """
+    Genera un patrón guilloche profesional con alta densidad de líneas basado en 
+    cuadrículas de flujo distorsionadas, similar a documentos de seguridad premium.
+    """
     img = Image.new('RGBA', (width, height), (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
     
-    # Parámetros para crear patrones complejos
-    colors = [(0, 128, 255, 15), (0, 204, 102, 15), (153, 51, 255, 15)]
+    # Colores sutiles en tonos verde, azul y gris
+    colors = [
+        (0, 150, 100, 25),    # Verde esmeralda
+        (100, 150, 200, 25),  # Azul cielo
+        (100, 100, 100, 20),  # Gris
+        (80, 160, 120, 22)    # Verde-azulado
+    ]
     
-    # Crear múltiples patrones de ondas
-    for color in colors:
-        for i in range(density):
-            amplitude = random.randint(20, 100)
-            frequency = random.randint(1, 10) / 100
-            offset = random.randint(0, height)
+    # Parámetros de distorsión
+    freq_x = random.uniform(0.005, 0.012)
+    freq_y = random.uniform(0.005, 0.012)
+    amp_x = random.uniform(15, 25)
+    amp_y = random.uniform(15, 25)
+    
+    phase_x = random.uniform(0, 2 * math.pi)
+    phase_y = random.uniform(0, 2 * math.pi)
+    
+    # Reducir el espaciado para aumentar la densidad de líneas
+    spacing_primary = 8    # Líneas principales (antes 15)
+    spacing_secondary = 16  # Líneas secundarias
+    
+    # 1. LÍNEAS HORIZONTALES PRINCIPALES (MAYOR DENSIDAD)
+    for y_base in range(0, height, spacing_primary):
+        color = colors[0]  # Verde para líneas horizontales
+        points = []
+        
+        for x in range(0, width + 1, 2):
+            # Aplicar distorsión sinusoidal
+            distort_y = amp_y * math.sin(x * freq_x + y_base * freq_y + phase_x)
+            y = y_base + distort_y
             
-            points = []
-            for x in range(0, width, 2):
-                y = int(offset + amplitude * (
-                    0.5 * math.sin(x * frequency) + 
-                    0.3 * math.sin(x * frequency * 2.1) +
-                    0.2 * math.sin(x * frequency * 4.7)
-                ))
+            if 0 <= y < height:
                 points.append((x, y))
+        
+        if len(points) > 1:
+            draw.line(points, fill=color, width=1)
+    
+    # 2. LÍNEAS VERTICALES PRINCIPALES (MAYOR DENSIDAD)
+    for x_base in range(0, width, spacing_primary):
+        color = colors[1]  # Azul para líneas verticales
+        points = []
+        
+        for y in range(0, height + 1, 2):
+            # Distorsión diferente para crear efecto de flujo
+            distort_x = amp_x * math.sin(y * freq_y + x_base * freq_x + phase_y)
+            x = x_base + distort_x
             
-            if len(points) > 1:
-                draw.line(points, fill=color, width=1)
+            if 0 <= x < width:
+                points.append((x, y))
+        
+        if len(points) > 1:
+            draw.line(points, fill=color, width=1)
+    
+    # 3. LÍNEAS DIAGONALES TIPO "/"
+    for d_base in range(-height, width, spacing_secondary):
+        color = colors[2]  # Gris para diagonales
+        points = []
+        
+        for t in range(0, width + height, 4):
+            x_base = d_base + t
+            y_base = t
+            
+            # Distorsión combinada
+            distort_x = amp_x * 0.7 * math.sin(y_base * freq_y + phase_x)
+            distort_y = amp_y * 0.7 * math.sin(x_base * freq_x + phase_y)
+            
+            x = x_base + distort_x
+            y = y_base + distort_y
+            
+            if 0 <= x < width and 0 <= y < height:
+                points.append((x, y))
+        
+        if len(points) > 1:
+            draw.line(points, fill=color, width=1)
+    
+    # 4. LÍNEAS DIAGONALES TIPO "\"
+    for d_base in range(-height, width, spacing_secondary):
+        color = colors[3]  # Verde-azulado para diagonales inversas
+        points = []
+        
+        for t in range(0, width + height, 4):
+            x_base = d_base + t
+            y_base = height - t
+            
+            # Distorsión combinada con fase diferente
+            distort_x = amp_x * 0.7 * math.sin(y_base * freq_y + phase_x + math.pi/2)
+            distort_y = amp_y * 0.7 * math.sin(x_base * freq_x + phase_y + math.pi/2)
+            
+            x = x_base + distort_x
+            y = y_base + distort_y
+            
+            if 0 <= x < width and 0 <= y < height:
+                points.append((x, y))
+        
+        if len(points) > 1:
+            draw.line(points, fill=color, width=1)
+    
+    # 5. LÍNEAS HORIZONTALES SECUNDARIAS (INTERCALADAS)
+    for y_base in range(spacing_primary // 2, height, spacing_primary):
+        color = (colors[0][0], colors[0][1], colors[0][2], colors[0][3] - 5)  # Verde más transparente
+        points = []
+        
+        for x in range(0, width + 1, 2):
+            # Aplicar distorsión sinusoidal con fase ligeramente diferente
+            distort_y = amp_y * math.sin(x * freq_x + y_base * freq_y + phase_x + math.pi/4)
+            y = y_base + distort_y
+            
+            if 0 <= y < height:
+                points.append((x, y))
+        
+        if len(points) > 1:
+            draw.line(points, fill=color, width=1)
+    
+    # 6. LÍNEAS VERTICALES SECUNDARIAS (INTERCALADAS)
+    for x_base in range(spacing_primary // 2, width, spacing_primary):
+        color = (colors[1][0], colors[1][1], colors[1][2], colors[1][3] - 5)  # Azul más transparente
+        points = []
+        
+        for y in range(0, height + 1, 2):
+            # Distorsión con fase ligeramente diferente
+            distort_x = amp_x * math.sin(y * freq_y + x_base * freq_x + phase_y + math.pi/4)
+            x = x_base + distort_x
+            
+            if 0 <= x < width:
+                points.append((x, y))
+        
+        if len(points) > 1:
+            draw.line(points, fill=color, width=1)
+    
+    # 7. EFECTO DE CAMPO DE FLUJO CENTRAL CON MAYOR DENSIDAD
+    # Crear distorsión adicional en el centro para el efecto de "remolino"
+    center_x, center_y = width / 2, height / 2
+    radius = min(width, height) * 0.4
+    
+    # Patrones radiales (más densidad)
+    for angle in range(0, 360, 5):  # Cada 5 grados en lugar de 10
+        rad = math.radians(angle)
+        color = random.choice(colors)
+        points = []
+        
+        for r in range(0, int(radius), 5):  # Saltos de 5 unidades en lugar de 10
+            # Calcular posición base
+            x_base = center_x + r * math.cos(rad)
+            y_base = center_y + r * math.sin(rad)
+            
+            # Distorsión radial
+            x = x_base + amp_x * 0.3 * math.sin(r * freq_x * 2 + phase_x)
+            y = y_base + amp_y * 0.3 * math.sin(r * freq_y * 2 + phase_y)
+            
+            if 0 <= x < width and 0 <= y < height:
+                points.append((x, y))
+        
+        if len(points) > 1:
+            draw.line(points, fill=color, width=1)
+    
+    # 8. PATRONES CONCÉNTRICOS ADICIONALES
+    for r_base in range(20, int(radius), 30):
+        color = random.choice(colors)
+        points = []
+        
+        for angle in range(0, 360, 2):
+            rad = math.radians(angle)
+            
+            # Radius con ondulación
+            r = r_base + 5 * math.sin(8 * rad)
+            
+            x = center_x + r * math.cos(rad)
+            y = center_y + r * math.sin(rad)
+            
+            if 0 <= x < width and 0 <= y < height:
+                points.append((x, y))
+        
+        # Cerrar el círculo
+        if points and len(points) > 2:
+            points.append(points[0])
+            draw.line(points, fill=color, width=1)
     
     return img
+
+
+
 
 def create_qr_code(data, size=3*cm):
     """Crea un código QR con los datos proporcionados."""
@@ -89,6 +254,11 @@ def secure_pdf(file_path, patient, verification_code, user):
     # Asegurar que el directorio exista
     os.makedirs(os.path.dirname(output_filename), exist_ok=True)
     
+    # micro_text = f"{verification_code} "
+    micro_text = " "
+
+
+
     # Crear un directorio temporal para guardar imágenes temporales
     temp_dir = tempfile.mkdtemp()
     
@@ -120,17 +290,18 @@ def secure_pdf(file_path, patient, verification_code, user):
                 watermark_path, 
                 0, 0, 
                 width=page_width, 
-                height=page_height
+                height=page_height,
+                mask='auto', 
+                preserveAspectRatio=True
             )
             
             # Agregar texto de seguridad
-            c.setFont("Helvetica", 8)
-            c.setFillColor(Color(0, 0, 0, alpha=0.3))
+            c.setFont("Helvetica", 6)  # Fuente más pequeña
+            c.setFillColor(Color(0, 0, 0, alpha=0.08))  # Mucho más transparente
             
             # Texto de microimpresión repetido como fondo de seguridad
-            micro_text = f"ZENTRASEAL-DOC-{verification_code} "
-            for y in range(0, int(page_height), 20):
-                for x in range(0, int(page_width), len(micro_text) * 3):
+            for y in range(0, int(page_height), 60):  # Aumentar espaciado vertical (de 40 a 60)
+                for x in range(0, int(page_width), len(micro_text) * 10):  # Aumentar espaciado horizontal (de 6 a 10)
                     c.drawString(x, y, micro_text)
             
             # Agregar información en el pie de página
@@ -191,7 +362,6 @@ def secure_pdf(file_path, patient, verification_code, user):
             shutil.rmtree(temp_dir)
         except:
             pass
-
 def verify_document_hash(file_path, stored_hash):
     """Verifica si el hash del documento coincide con el almacenado."""
     current_hash = calculate_document_hash(file_path)
