@@ -235,14 +235,16 @@ def calculate_document_hash(file_path):
             hash_sha256.update(chunk)
     return hash_sha256.hexdigest()
 
+
 def secure_pdf(file_path, patient, verification_code, user):
     """
     Aplica medidas de seguridad al PDF:
     1. Agrega marca de agua tipo guilloche
-    2. Inserta código QR para verificación
-    3. Agrega metadatos de seguridad
-    4. Restringe permisos de edición
-    5. Calcula y almacena hash del documento
+    2. Agrega marca de agua de imagen repetida (logo)
+    3. Inserta código QR para verificación
+    4. Agrega metadatos de seguridad
+    5. Restringe permisos de edición
+    6. Calcula y almacena hash del documento
     """
     # Importaciones
     from .utils import mask_identification, verify_pdf_protection
@@ -257,7 +259,14 @@ def secure_pdf(file_path, patient, verification_code, user):
     # Asegurar que el directorio exista
     os.makedirs(os.path.dirname(output_filename), exist_ok=True)
     
-    # micro_text = f"{verification_code} "
+    # Configurar directorio de marcas de agua si no existe
+    watermarks_dir = os.path.join(settings.MEDIA_ROOT, 'watermarks')
+    os.makedirs(watermarks_dir, exist_ok=True)
+    
+    # Ruta a la imagen de marca de agua (logo)
+    watermark_image_path = os.path.join(watermarks_dir, 'logo.png')
+    
+    # Texto para microimpresión
     micro_text = " "
 
     # Enmascarar ID del paciente para el pie de página
@@ -284,12 +293,12 @@ def secure_pdf(file_path, patient, verification_code, user):
             packet = BytesIO()
             c = canvas.Canvas(packet, pagesize=(page_width, page_height))
             
-            # Dibujar marca de agua tipo guilloche - GUARDAR COMO ARCHIVO TEMPORAL
+            # 1. Dibujar marca de agua tipo guilloche
             watermark_img = generate_guilloche_pattern(int(page_width), int(page_height))
             watermark_path = os.path.join(temp_dir, f"watermark_{i}.png")
             watermark_img.save(watermark_path)
             
-            # Usar la ruta del archivo temporal
+            # Aplicar el patrón guilloche
             c.drawImage(
                 watermark_path, 
                 0, 0, 
@@ -299,16 +308,59 @@ def secure_pdf(file_path, patient, verification_code, user):
                 preserveAspectRatio=True
             )
             
-            # Agregar texto de seguridad
+            # 2. Agregar marca de agua de imagen repetida (logo)
+            # 2. Agregar marca de agua de imagen repetida (logo)
+            if os.path.exists(watermark_image_path):
+                # Tamaño de la imagen de marca de agua (reducido para mayor densidad)
+                wm_width = 120  # Reducido de 150
+                wm_height = 80  # Reducido de 100
+                
+                # Espaciado entre imágenes (reducido para mayor repetición)
+                x_spacing = 180  # Reducido de 300
+                y_spacing = 180  # Reducido de 300
+                
+                # Rotación aleatoria para cada imagen
+                import random
+                
+                # Configurar transparencia para la marca de agua
+                c.saveState()
+                c.setFillAlpha(0.07)  # Mantener la misma opacidad para no afectar la legibilidad
+                
+                # Repetir la imagen por toda la página con un patrón escalonado
+                for y in range(30, int(page_height), y_spacing):
+                    offset = 90 if (y // y_spacing) % 2 == 0 else 0
+                    for x in range(offset, int(page_width), x_spacing):
+                        # Rotación aleatoria sutil para variación
+                        rotation = random.uniform(-5, 5)
+                        
+                        c.saveState()
+                        c.translate(x + wm_width/2, y + wm_height/2)
+                        c.rotate(rotation)
+                        c.translate(-wm_width/2, -wm_height/2)
+                        
+                        c.drawImage(
+                            watermark_image_path,
+                            0, 0,
+                            width=wm_width,
+                            height=wm_height,
+                            mask='auto',
+                            preserveAspectRatio=True
+                        )
+                        
+                        c.restoreState()
+            
+                c.restoreState()
+            
+            # 3. Agregar texto de microimpresión de seguridad
             c.setFont("Helvetica", 6)  # Fuente más pequeña
-            c.setFillColor(Color(0, 0, 0, alpha=0.08))  # Mucho más transparente
+            c.setFillColor(Color(0, 0, 0, alpha=0.08))  # Muy transparente
             
             # Texto de microimpresión repetido como fondo de seguridad
-            for y in range(0, int(page_height), 60):  # Aumentar espaciado vertical (de 40 a 60)
-                for x in range(0, int(page_width), len(micro_text) * 10):  # Aumentar espaciado horizontal (de 6 a 10)
+            for y in range(0, int(page_height), 60):  # Espaciado vertical
+                for x in range(0, int(page_width), len(micro_text) * 10):  # Espaciado horizontal
                     c.drawString(x, y, micro_text)
             
-            # Agregar información en el pie de página con identificación enmascarada
+            # 4. Agregar información en el pie de página con identificación enmascarada
             c.setFont("Helvetica-Bold", 10)
             c.setFillColor(Color(0, 0, 0, alpha=1))
             footer_text = (
@@ -317,12 +369,12 @@ def secure_pdf(file_path, patient, verification_code, user):
             )
             c.drawString(30, 30, footer_text)
             
-            # Crear y guardar el código QR como archivo temporal
+            # 5. Crear y guardar el código QR
             qr_img = create_qr_code(verification_url)
             qr_path = os.path.join(temp_dir, f"qr_{i}.png")
             qr_img.save(qr_path)
             
-            # Usar la ruta del archivo temporal
+            # Usar la ruta del archivo temporal del QR
             c.drawImage(
                 qr_path, 
                 page_width - 3*cm - 20, 
@@ -342,19 +394,19 @@ def secure_pdf(file_path, patient, verification_code, user):
             watermarked_page.merge_page(watermark.pages[0])
             writer.add_page(watermarked_page)
         
-        # Establecer restricciones de seguridad
+        # 6. Establecer restricciones de seguridad
         writer.encrypt(
-            user_password="",  # No password required to open
-            owner_password=f"{patient.identification}{verification_code}",  # Password to modify
+            user_password="",  # No requiere contraseña para abrir
+            owner_password=f"{patient.identification}{verification_code}",  # Contraseña para modificar
             use_128bit=True,
-            permissions_flag=4  # Allow only printing
+            permissions_flag=4  # Permitir solo impresión
         )
         
-        # Guardar el archivo resultante
+        # 7. Guardar el archivo resultante
         with open(output_filename, "wb") as output_file:
             writer.write(output_file)
         
-        # Verificar que el PDF esté correctamente protegido
+        # 8. Verificar que el PDF esté correctamente protegido
         protection_info = verify_pdf_protection(output_filename)
         if not protection_info.get("is_protected", False):
             print(f"ADVERTENCIA: El PDF no está protegido correctamente: {protection_info}")
@@ -362,7 +414,7 @@ def secure_pdf(file_path, patient, verification_code, user):
         else:
             print(f"PDF protegido correctamente: {protection_info}")
         
-        # Calcular el hash del documento
+        # 9. Calcular el hash del documento
         document_hash = calculate_document_hash(output_filename)
         
         return output_filename
@@ -374,6 +426,7 @@ def secure_pdf(file_path, patient, verification_code, user):
             shutil.rmtree(temp_dir)
         except:
             pass
+
 
 def verify_document_hash(file_path, stored_hash):
     """Verifica si el hash del documento coincide con el almacenado."""
