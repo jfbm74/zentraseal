@@ -1,0 +1,50 @@
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+venv*/
+
+# Django SQLite DB
+*.sqlite3
+db.sqlite3
+
+# Media: ignora todo excepto media/watermarks
+media/*
+!media/watermarks/
+!media/watermarks/**
+
+# Static files (si haces collectstatic)
+staticfiles/
+
+# Settings locales o secretos
+local_settings.py
+.env
+*.env
+
+# Logs
+*.log
+
+# IDEs / Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Compiled Python extensions (CPython)
+*.so
+*.pyd
+
+# Ficheros .cpython-<version>.pyc
+**/*cpython-*.pyc
+**/__pycache__/
+**/*.pyc
