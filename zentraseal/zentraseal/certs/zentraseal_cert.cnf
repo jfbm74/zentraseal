@@ -1,0 +1,20 @@
+[ req ]
+default_bits = 2048
+default_md = sha256
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[ req_distinguished_name ]
+C = CO
+ST = Valle del Cauca
+L = Tulua
+O = ZentraSeal
+OU = Seguridad Digital
+CN = ZentraSeal Certificate Authority
+emailAddress = info@zentratek.com
+
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment
+extendedKeyUsage = emailProtection, codeSigning
