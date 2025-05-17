@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel de Control - ZentraSeal{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title">Bienvenido, {{ user.username }}</h2>
+                <p class="card-text">Este es tu panel de control de ZentraSeal, donde puedes gestionar documentos médicos seguros.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="fas fa-file-upload fa-3x mb-3 text-primary"></i>
+                <h5 class="card-title">Subir Documento</h5>
+                <p class="card-text">Sube un nuevo documento médico para protegerlo.</p>
+                <a href="{% url 'upload_document' %}" class="btn btn-primary">Subir Ahora</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="fas fa-search fa-3x mb-3 text-primary"></i>
+                <h5 class="card-title">Verificar Documento</h5>
+                <p class="card-text">Verifica la autenticidad de un documento ZentraSeal.</p>
+                <a href="{% url 'verify_document' %}" class="btn btn-primary">Verificar</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="fas fa-user-plus fa-3x mb-3 text-primary"></i>
+                <h5 class="card-title">Gestionar Pacientes</h5>
+                <p class="card-text">Administra la información de tus pacientes.</p>
+                <a href="#" class="btn btn-primary">Gestionar</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">Documentos Recientes</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Título</th>
+                                <th>Tipo</th>
+                                <th>Paciente</th>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for document in documents %}
+                            <tr>
+                                <td>{{ document.title }}</td>
+                                <td>{{ document.get_document_type_display }}</td>
+                                <td>{{ document.patient.name }}</td>
+                                <td>{{ document.created_at|date:"d/m/Y H:i" }}</td>
+                                <td>
+                                    {% if document.is_signed %}
+                                    <span class="verification-badge"><i class="fas fa-check-circle me-1"></i>Firmado</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">Pendiente</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'document_detail' document.pk %}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">No hay documentos disponibles</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

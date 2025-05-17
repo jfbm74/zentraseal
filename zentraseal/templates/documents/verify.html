@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}Verificar Documento - ZentraSeal{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-header bg-primary text-white">
+                <h4 class="card-title mb-0">Verificar Autenticidad del Documento</h4>
+            </div>
+            <div class="card-body">
+                <p class="lead">Ingresa el código de verificación para comprobar la autenticidad de un documento.</p>
+                
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <input type="text" name="verification_code" class="form-control form-control-lg text-center" placeholder="Código de verificación" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-search me-1"></i>Verificar Documento
+                    </button>
+                </form>
+                
+                <div class="mt-4">
+                    <p>También puedes escanear el código QR en el documento para verificar automáticamente.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

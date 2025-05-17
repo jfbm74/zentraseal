@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Resultado de Verificación - ZentraSeal{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header {% if is_valid %}bg-success{% else %}bg-danger{% endif %} text-white">
+                <h4 class="card-title mb-0">
+                    {% if is_valid %}
+                    <i class="fas fa-check-circle me-2"></i>Documento Auténtico
+                    {% else %}
+                    <i class="fas fa-times-circle me-2"></i>Documento No Verificado
+                    {% endif %}
+                </h4>
+            </div>
+            <div class="card-body">
+                {% if is_valid %}
+                <div class="text-center mb-4">
+                    <i class="fas fa-shield-alt text-success fa-5x mb-3"></i>
+                    <h2>Documento Verificado Correctamente</h2>
+                    <p class="lead">Este documento es auténtico y ha sido protegido por ZentraSeal.</p>
+                </div>
+                
+                <table class="table table-striped">
+                    <tbody>
+                        <tr>
+                            <th style="width: 30%">Título del documento:</th>
+                            <td>{{ document.title }}</td>
+                        </tr>
+                        <tr>
+                            <th>Tipo de documento:</th>
+                            <td>{{ document.get_document_type_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>Paciente:</th>
+                            <td>{{ document.patient.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Identificación:</th>
+                            <td>{{ document.patient.identification }}</td>
+                        </tr>
+                        <tr>
+                            <th>Fecha de creación:</th>
+                            <td>{{ document.created_at|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Código de verificación:</th>
+                            <td>{{ document.verification_code }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="text-center mt-4">
+                    <a href="{{ document.secure_file.url }}" class="btn btn-primary" target="_blank">
+                        <i class="fas fa-eye me-1"></i>Ver Documento
+                    </a>
+                </div>
+                {% else %}
+                <div class="text-center">
+                    <i class="fas fa-exclamation-triangle text-danger fa-5x mb-3"></i>
+                    <h2>Documento No Verificado</h2>
+                    <p class="lead">No se ha encontrado ningún documento con el código de verificación proporcionado.</p>
+                    <p>El documento puede haber sido manipulado o el código de verificación es incorrecto.</p>
+                    
+                    <div class="mt-4">
+                        <a href="{% url 'verify_document' %}" class="btn btn-primary">
+                            <i class="fas fa-redo me-1"></i>Intentar Nuevamente
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
