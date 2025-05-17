@@ -2,78 +2,6 @@
 import os
 import hashlib
 import qrcode
-from io import BytesIO
-from reportlab.pdfgen import canvas
-from reportlab.lib.units import cm
-from reportlab.lib.colors import Color
-from PyPDF2 import PdfReader, PdfWriter
-from django.conf import settings
-import random
-import string
-from PIL import Image, ImageDraw
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.serialization import load_pem_private_key
-import tempfile
-import uuid
-
-def generate_guilloche_pattern(width, height, density=30):
-    """Genera un patrón de guilloche (similar a los billetes) como marca de agua."""
-    img = Image.new('RGBA', (width, height), (255, 255, 255, 0))
-    draw = ImageDraw.Draw(img)
-    
-    # Parámetros para crear patrones complejos
-    colors = [(0, 128, 255, 15), (0, 204, 102, 15), (153, 51, 255, 15)]
-    
-    # Crear múltiples patrones de ondas
-    for color in colors:
-        for i in range(density):
-            amplitude = random.randint(20, 100)
-            frequency = random.randint(1, 10) / 100
-            offset = random.randint(0, height)
-            
-            points = []
-            for x in range(0, width, 2):
-                y = int(offset + amplitude * (
-                    0.5 * math.sin(x * frequency) + 
-                    0.3 * math.sin(x * frequency * 2.1) +
-                    0.2 * math.sin(x * frequency * 4.7)
-                ))
-                points.append((x, y))
-            
-            if len(points) > 1:
-                draw.line(points, fill=color, width=1)
-    
-    return img
-
-def create_qr_code(data, size=3*cm):
-    """Crea un código QR con los datos proporcionados."""
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
-        border=4,
-    )
-    qr.add_data(data)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    buffer = BytesIO()
-    img.save(buffer, format="PNG")
-    return buffer.getvalue()
-
-def calculate_document_hash(file_path):
-    """Calcula un hash SHA-256 del documento."""
-    hash_sha256 = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            hash_sha256.update(chunk)
-    return hash_sha256.hexdigest()
-
-# documents/utils.py
-import os
-import hashlib
-import qrcode
 import math
 from io import BytesIO
 from reportlab.pdfgen import canvas
@@ -87,6 +15,9 @@ from PIL import Image, ImageDraw
 from datetime import datetime
 import uuid
 import tempfile
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
 def generate_guilloche_pattern(width, height, density=30):
     """Genera un patrón de guilloche (similar a los billetes) como marca de agua."""
@@ -209,9 +140,10 @@ def secure_pdf(file_path, patient, verification_code, user):
         c.drawString(30, 30, footer_text)
         
         # Agregar código QR para verificación
-        qr_code = create_qr_code(verification_url)
+        qr_code = create_qr_code(verification_url)  # Esta línea faltaba
+        qr_buffer = BytesIO(qr_code)
         c.drawImage(
-            BytesIO(qr_code), 
+            qr_buffer, 
             page_width - 3*cm - 20, 
             20, 
             width=3*cm, 
@@ -241,17 +173,12 @@ def secure_pdf(file_path, patient, verification_code, user):
     with open(output_filename, "wb") as output_file:
         writer.write(output_file)
     
-    # Calcular y almacenar el hash del documento
+    # Calcular y almacentar el hash del documento
     document_hash = calculate_document_hash(output_filename)
     
     # Aquí se puede implementar el registro en blockchain si es necesario
     
     return output_filename
-
-def verify_document_hash(file_path, stored_hash):
-    """Verifica si el hash del documento coincide con el almacenado."""
-    current_hash = calculate_document_hash(file_path)
-    return current_hash == stored_hash
 
 def verify_document_hash(file_path, stored_hash):
     """Verifica si el hash del documento coincide con el almacenado."""

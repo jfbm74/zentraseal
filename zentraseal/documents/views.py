@@ -13,6 +13,7 @@ import string
 from datetime import datetime
 import uuid
 
+
 @login_required
 def upload_document(request):
     """Vista para subir y asegurar nuevos documentos."""
@@ -37,14 +38,19 @@ def upload_document(request):
                     request.user
                 )
                 
-                # Actualizar el documento con el archivo seguro
-                document.secure_file = os.path.relpath(secure_file_path, settings.MEDIA_ROOT)
-                document.is_signed = True
-                document.save()
-                
-                messages.success(request, 'Documento protegido exitosamente.')
-                return redirect('document_detail', pk=document.pk)
+                # Verificar que la ruta existe
+                if os.path.exists(secure_file_path):
+                    # Obtener ruta relativa para guardar en la base de datos
+                    rel_path = os.path.relpath(secure_file_path, settings.MEDIA_ROOT)
+                    document.secure_file = rel_path
+                    document.is_signed = True
+                    document.save()
+                    messages.success(request, 'Documento protegido exitosamente.')
+                    return redirect('document_detail', pk=document.pk)
+                else:
+                    raise ValueError(f"El archivo seguro no existe: {secure_file_path}")
             except Exception as e:
+                print(f"Error al procesar el documento: {str(e)}")
                 messages.error(request, f'Error al procesar el documento: {str(e)}')
     else:
         form = DocumentUploadForm()
